@@ -1,5 +1,5 @@
 # amax-logger-hook
-DLL to display the calls to Blur's original ``amax\_logger(...)`` function, used for debugging Flask loader.
+DLL to display the calls to Blur's original ``amax_logger(...)`` function, used for debugging.
 
 ## Build
 ```
