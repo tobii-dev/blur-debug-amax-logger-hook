@@ -1,21 +1,44 @@
 #![feature(c_variadic)]
 #![cfg(windows)]
 
-pub mod dll;
 pub mod hook;
 
 use std::ffi::c_void;
 
 use crate::hook::api::set_hook;
 use minhook_sys::{MH_Initialize, MH_Uninitialize, MH_OK};
-use windows::{
-	core::PCSTR,
-	Win32::{Foundation::HMODULE, System::LibraryLoader::GetModuleHandleA},
-};
+use windows::{core::PCSTR, Win32::System::LibraryLoader::GetModuleHandleA};
 
 use simplelog::*;
 
-pub fn init(module: HMODULE) {
+use blur_plugins_core::{BlurAPI, BlurEvent, BlurPlugin};
+
+#[repr(C)]
+struct MyAmaxDebugHookPlugin {}
+
+impl BlurPlugin for MyAmaxDebugHookPlugin {
+	fn name(&self) -> &'static str {
+		"MyAmaxDebugHookPlugin!"
+	}
+
+	fn on_event(&self, event: &BlurEvent) {
+		match &event {
+			BlurEvent::NoEvent => {}
+			BlurEvent::Login(_) => {}
+			BlurEvent::Screen(_) => {}
+		}
+	}
+
+	fn free(&self) {
+		let r = unsafe { MH_Uninitialize() };
+		if r != MH_OK {
+			log::error!("minhook_sys::MH_Uninitialize() returns {r}");
+		}
+	}
+}
+
+#[no_mangle]
+fn plugin_init(_api: &mut dyn BlurAPI) -> Box<dyn BlurPlugin> {
 	let cfg = ConfigBuilder::new()
 		.set_time_offset_to_local()
 		.unwrap()
@@ -37,7 +60,6 @@ pub fn init(module: HMODULE) {
 	])
 	.unwrap();
 	log_panics::init();
-	log::info!("amax_logger_hooks: init @ {module:X?}");
 
 	let ptr_base: *mut c_void = unsafe { GetModuleHandleA(PCSTR::null()) }.unwrap().0 as _;
 	let r = unsafe { MH_Initialize() };
@@ -46,12 +68,6 @@ pub fn init(module: HMODULE) {
 	}
 	set_hook(ptr_base);
 	log::info!("amax_logger_hooks: init -- done!");
-}
 
-pub fn free(module: HMODULE) {
-	let r = unsafe { MH_Uninitialize() };
-	if r != MH_OK {
-		log::error!("minhook_sys::MH_Uninitialize() returns {r}");
-	}
-	log::info!("amax_logger_hooks: free @ {module:X?}");
+	Box::new(MyAmaxDebugHookPlugin {})
 }
