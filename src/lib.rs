@@ -18,16 +18,10 @@ struct MyAmaxDebugHookPlugin {}
 
 impl BlurPlugin for MyAmaxDebugHookPlugin {
 	fn name(&self) -> &'static str {
-		"MyAmaxDebugHookPlugin!"
+		"MyAmaxDebugHookPlugin"
 	}
 
-	fn on_event(&self, event: &BlurEvent) {
-		match &event {
-			BlurEvent::NoEvent => {}
-			BlurEvent::Login(_) => {}
-			BlurEvent::Screen(_) => {}
-		}
-	}
+	fn on_event(&self, _event: &BlurEvent) {}
 
 	fn free(&self) {
 		let r = unsafe { MH_Uninitialize() };
@@ -39,11 +33,16 @@ impl BlurPlugin for MyAmaxDebugHookPlugin {
 
 #[no_mangle]
 fn plugin_init(_api: &mut dyn BlurAPI) -> Box<dyn BlurPlugin> {
+	let plugin = MyAmaxDebugHookPlugin {};
+
 	let cfg = ConfigBuilder::new()
 		.set_time_offset_to_local()
 		.unwrap()
 		.build();
-
+	let log_path = std::format!(".\\amax\\log\\{}.log", plugin.name());
+	let log_file = std::fs::File::create(&log_path).unwrap_or_else(|_| {
+		panic!("Couldn't create log file: {log_path}");
+	});
 	CombinedLogger::init(vec![
 		TermLogger::new(
 			LevelFilter::Trace,
@@ -51,12 +50,7 @@ fn plugin_init(_api: &mut dyn BlurAPI) -> Box<dyn BlurPlugin> {
 			TerminalMode::Mixed,
 			ColorChoice::Auto,
 		),
-		WriteLogger::new(
-			LevelFilter::Trace,
-			Config::default(),
-			std::fs::File::create(".\\amax\\log\\amax_logger_hooks.log")
-				.expect("Couldn't create log file: .\\amax\\log\\amax_logger_hooks.log"),
-		),
+		WriteLogger::new(LevelFilter::Trace, Config::default(), log_file),
 	])
 	.unwrap();
 	log_panics::init();
@@ -69,5 +63,5 @@ fn plugin_init(_api: &mut dyn BlurAPI) -> Box<dyn BlurPlugin> {
 	set_hook(ptr_base);
 	log::info!("amax_logger_hooks: init -- done!");
 
-	Box::new(MyAmaxDebugHookPlugin {})
+	Box::new(plugin)
 }
