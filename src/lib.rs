@@ -39,10 +39,7 @@ fn plugin_init(_api: &mut dyn BlurAPI) -> Box<dyn BlurPlugin> {
 		.set_time_offset_to_local()
 		.unwrap()
 		.build();
-	let log_path = std::format!(".\\amax\\log\\{}.log", plugin.name());
-	let log_file = std::fs::File::create(&log_path).unwrap_or_else(|_| {
-		panic!("Couldn't create log file: {log_path}");
-	});
+	let log_file = blur_plugins_core::create_log_file("amax_logger_hook.log").unwrap();
 	CombinedLogger::init(vec![
 		TermLogger::new(
 			LevelFilter::Trace,
@@ -61,7 +58,6 @@ fn plugin_init(_api: &mut dyn BlurAPI) -> Box<dyn BlurPlugin> {
 		log::error!("minhook_sys::MH_Initialize() returns {r}");
 	}
 	set_hook(ptr_base);
-	log::info!("amax_logger_hooks: init -- done!");
 
 	Box::new(plugin)
 }
